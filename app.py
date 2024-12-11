@@ -16,8 +16,8 @@ items_collection = db["items"]
 # Middleware to prevent caching of pages
 @app.after_request
 def add_cache_control_headers(response):
-    # Prevent caching for login, register, CRUD, and update pages
-    if request.endpoint in ['login', 'register', 'crud', 'update']:
+    # Prevent caching for sensitive pages (CRUD, update, admin)
+    if request.endpoint in ['crud', 'update', 'admin']:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
@@ -78,7 +78,8 @@ def crud():
             all_users = users_collection.find()  # Get all users from the database
             return render_template('admin.html', users=all_users)
 
-        items = items_collection.find()  # Get all items from MongoDB
+        # Show items related to the logged-in user
+        items = items_collection.find({'username': user})  # Filter items by the logged-in user
         return render_template('index.html', items=items)
     else:
         return redirect(url_for('login'))  # Redirect to login page if not logged in
@@ -91,21 +92,27 @@ def add_item():
 
     name = request.form['name']
     value = request.form['value']
-    items_collection.insert_one({'name': name, 'value': value})
+    username = session['username']  # Associate the item with the logged-in user
+    items_collection.insert_one({'name': name, 'value': value, 'username': username})
     return redirect(url_for('crud'))
 
 # Route to update an existing item
 @app.route('/update/<name>', methods=['GET', 'POST'])
 def update_item(name):
-    if 'username' not in session:
+    if 'username' not in session:  # Check if the user is logged in
         return redirect(url_for('login'))  # Redirect to login page if not logged in
+
+    username = session['username']
+    item = items_collection.find_one({'name': name, 'username': username})
+
+    if not item:
+        return redirect(url_for('crud'))  # Redirect if the item does not belong to the user
 
     if request.method == 'POST':
         new_value = request.form['value']
-        items_collection.update_one({'name': name}, {'$set': {'value': new_value}})
+        items_collection.update_one({'name': name, 'username': username}, {'$set': {'value': new_value}})
         return redirect(url_for('crud'))
 
-    item = items_collection.find_one({'name': name})
     return render_template('update.html', item=item)
 
 # Route to delete an item
@@ -114,7 +121,8 @@ def delete_item(name):
     if 'username' not in session:
         return redirect(url_for('login'))  # Redirect to login page if not logged in
 
-    items_collection.delete_one({'name': name})
+    username = session['username']
+    items_collection.delete_one({'name': name, 'username': username})
     return redirect(url_for('crud'))
 
 # Route to delete a user (admin only)
@@ -132,6 +140,17 @@ def delete_user(username):
 def logout():
     session.pop('username', None)  # Removes the username from the session
     return redirect(url_for('login'))  # Redirect to login page
+
+# Prevent back button cache issue after logout
+@app.before_request
+def before_request():
+    if 'username' not in session:
+        # If the user is not logged in, clear any previous session data
+        session.clear()
+
+    # If a user tries to access a page they shouldn't (crud, update, admin) after logout, redirect them to login
+    if request.endpoint in ['crud', 'update', 'admin'] and 'username' not in session:
+        return redirect(url_for('login'))
 
 if __name__ == "__main__":
     app.run(debug=True)
