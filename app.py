@@ -18,7 +18,7 @@ user_filters_collection = db["user_filters"]  # Collection for storing filter se
 @app.after_request
 def add_cache_control_headers(response):
     # Prevent caching for sensitive pages (CRUD, update, admin)
-    if request.endpoint in ['crud', 'update', 'admin']:
+    if request.endpoint in ['crud', 'update', 'admin', 'login']:
         response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0"
         response.headers["Pragma"] = "no-cache"
         response.headers["Expires"] = "0"
@@ -188,6 +188,8 @@ def delete_user(username):
 @app.route('/logout')
 def logout():
     session.pop('username', None)  # Removes the username from the session
+    session.pop('filter_name', None)  # Remove filter settings from the session
+    session.pop('filter_value', None)  # Remove filter settings from the session
     return redirect(url_for('login'))  # Redirect to login page
 
 # Prevent back button cache issue after logout
@@ -199,7 +201,7 @@ def before_request():
 
     # If a user tries to access a page they shouldn't (crud, update, admin) after logout, redirect them to login
     if request.endpoint in ['crud', 'update', 'admin'] and 'username' not in session:
-        return redirect(url_for('login'))
+        return redirect(url_for('login'))  # Redirect to login page after logout
 
 if __name__ == "__main__":
     app.run(debug=True)
