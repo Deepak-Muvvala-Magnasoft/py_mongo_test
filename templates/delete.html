@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delete Item</title>
+</head>
+<body>
+    <h1>Delete Item</h1>
+    <form action="/delete/{{ name }}" method="post">
+        <p>Are you sure you want to delete {{ name }}?</p>
+        <button type="submit">Delete</button>
+    </form>
+    <br><a href="/">Go Back to Items</a>
+</body>
+</html>
