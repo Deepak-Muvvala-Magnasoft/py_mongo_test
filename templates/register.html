@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Register</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
     <style>
@@ -68,7 +71,9 @@
 <div class="card">
     <h2>Register</h2>
     <!-- Alert message -->
-    <div class="alert" id="error-message">Username already taken. Please choose another one.</div>
+    {% if error %}
+        <div class="alert" id="error-message">{{ error }}</div>
+    {% endif %}
 
     <form action="{{ url_for('register') }}" method="POST">
         <input type="text" name="username" placeholder="Username" required><br>
@@ -78,6 +83,13 @@
 
     <p>Already have an account? <a href="{{ url_for('login') }}" class="link">Login here</a></p>
 </div>
-
+<script>
+    if (window.history && window.history.pushState) {
+        window.history.pushState('forward', null, './');
+        window.onpopstate = function() {
+            window.history.forward();
+        };
+    }
+</script>
 </body>
 </html>

@@ -27,5 +27,15 @@
         </form>
     </div>
 
+    <!-- Prevent back navigation -->
+    <script>
+        if (window.history && window.history.pushState) {
+            window.history.pushState('forward', null, './');
+            window.onpopstate = function() {
+                window.history.forward();
+            };
+        }
+    </script>
+
 </body>
 </html>

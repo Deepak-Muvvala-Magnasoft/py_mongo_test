@@ -13,21 +13,20 @@ db = client["crud_db"]
 users_collection = db["users"]
 items_collection = db["items"]
 
-
 # Middleware to prevent caching of pages
 @app.after_request
 def add_cache_control_headers(response):
-    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
+    # Prevent caching for login, register, CRUD, and update pages
+    if request.endpoint in ['login', 'register', 'crud', 'update']:
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
     return response
-
 
 # Redirect root URL to login
 @app.route('/')
 def home():
     return redirect(url_for('login'))
-
 
 # Route for user login
 @app.route('/login', methods=['GET', 'POST'])
@@ -51,7 +50,6 @@ def login():
 
     return render_template('login.html')
 
-
 # Route for user registration
 @app.route('/register', methods=['GET', 'POST'])
 def register():
@@ -69,7 +67,6 @@ def register():
 
     return render_template('register.html')
 
-
 # CRUD page route
 @app.route('/crud')
 def crud():
@@ -86,7 +83,6 @@ def crud():
     else:
         return redirect(url_for('login'))  # Redirect to login page if not logged in
 
-
 # Route to add a new item
 @app.route('/add', methods=['POST'])
 def add_item():
@@ -97,7 +93,6 @@ def add_item():
     value = request.form['value']
     items_collection.insert_one({'name': name, 'value': value})
     return redirect(url_for('crud'))
-
 
 # Route to update an existing item
 @app.route('/update/<name>', methods=['GET', 'POST'])
@@ -113,7 +108,6 @@ def update_item(name):
     item = items_collection.find_one({'name': name})
     return render_template('update.html', item=item)
 
-
 # Route to delete an item
 @app.route('/delete/<name>')
 def delete_item(name):
@@ -122,7 +116,6 @@ def delete_item(name):
 
     items_collection.delete_one({'name': name})
     return redirect(url_for('crud'))
-
 
 # Route to delete a user (admin only)
 @app.route('/delete_user/<username>')
@@ -134,13 +127,11 @@ def delete_user(username):
     users_collection.delete_one({'username': username})
     return redirect(url_for('crud'))  # Redirect back to the admin page
 
-
 # Route to logout
 @app.route('/logout')
 def logout():
     session.pop('username', None)  # Removes the username from the session
     return redirect(url_for('login'))  # Redirect to login page
-
 
 if __name__ == "__main__":
     app.run(debug=True)
