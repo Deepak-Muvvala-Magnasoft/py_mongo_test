@@ -50,6 +50,21 @@
             <button type="submit" class="btn btn-primary btn-block">Add Item</button>
         </form>
 
+        <!-- Filter Form -->
+        <form method="POST" class="mb-4">
+            <div class="row">
+                <div class="col-md-5">
+                    <input type="text" name="filter_name" class="form-control" placeholder="Filter by Name" value="{{ filter_name }}">
+                </div>
+                <div class="col-md-5">
+                    <input type="text" name="filter_value" class="form-control" placeholder="Filter by Value" value="{{ filter_value }}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary btn-block">Apply Filter</button>
+                </div>
+            </div>
+        </form>
+
         <h2>Items List</h2>
         <ul class="list-group">
             {% for item in items %}

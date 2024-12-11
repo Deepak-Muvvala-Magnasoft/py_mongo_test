@@ -68,7 +68,7 @@ def register():
     return render_template('register.html')
 
 # CRUD page route
-@app.route('/crud')
+@app.route('/crud', methods=['GET', 'POST'])
 def crud():
     if 'username' in session:  # Check if user is logged in
         user = session['username']
@@ -78,9 +78,26 @@ def crud():
             all_users = users_collection.find()  # Get all users from the database
             return render_template('admin.html', users=all_users)
 
-        # Show items related to the logged-in user
-        items = items_collection.find({'username': user})  # Filter items by the logged-in user
-        return render_template('index.html', items=items)
+        # Initialize filter variables
+        filter_name = ""
+        filter_value = ""
+
+        # Check if filter form is submitted
+        if request.method == 'POST':
+            filter_name = request.form.get('filter_name', '')
+            filter_value = request.form.get('filter_value', '')
+
+        # Build the filter query
+        query = {'username': user}
+        if filter_name:
+            query['name'] = {'$regex': filter_name, '$options': 'i'}  # Case-insensitive search
+        if filter_value:
+            query['value'] = {'$regex': filter_value, '$options': 'i'}
+
+        # Fetch items based on the filter query
+        items = items_collection.find(query)
+
+        return render_template('index.html', items=items, filter_name=filter_name, filter_value=filter_value)
     else:
         return redirect(url_for('login'))  # Redirect to login page if not logged in
 
