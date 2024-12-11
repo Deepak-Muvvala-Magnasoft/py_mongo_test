@@ -12,6 +12,7 @@ client = MongoClient(
 db = client["crud_db"]
 users_collection = db["users"]
 items_collection = db["items"]
+user_filters_collection = db["user_filters"]  # Collection for storing filter settings
 
 # Middleware to prevent caching of pages
 @app.after_request
@@ -44,6 +45,11 @@ def login():
 
         if user:
             session['username'] = username  # Store the username in the session
+            # Load the saved filter settings
+            saved_filter = user_filters_collection.find_one({'username': username})
+            if saved_filter:
+                session['filter_name'] = saved_filter.get('filter_name', '')
+                session['filter_value'] = saved_filter.get('filter_value', '')
             return redirect(url_for('crud'))  # Redirect to CRUD page if logged in
         else:
             return render_template('login.html', error='Invalid credentials')  # Show error if invalid credentials
@@ -79,25 +85,51 @@ def crud():
             return render_template('admin.html', users=all_users)
 
         # Initialize filter variables
-        filter_name = ""
-        filter_value = ""
+        filter_name = session.get('filter_name', '')
+        filter_value = session.get('filter_value', '')
 
         # Check if filter form is submitted
         if request.method == 'POST':
             filter_name = request.form.get('filter_name', '')
             filter_value = request.form.get('filter_value', '')
 
-        # Build the filter query
+            # Only save filter settings when 'Save Filter' button is clicked
+            if 'save_filter' in request.form:
+                # Save the filter settings to the database
+                user_filters_collection.update_one(
+                    {'username': user},
+                    {'$set': {'filter_name': filter_name, 'filter_value': filter_value}},
+                    upsert=True
+                )
+
+                # Update session with the new filter
+                session['filter_name'] = filter_name
+                session['filter_value'] = filter_value
+
+            # Apply the filter, but do not save it
+            # Build the filter query
+            query = {'username': user}
+            if filter_name:
+                query['name'] = {'$regex': filter_name, '$options': 'i'}  # Case-insensitive search
+            if filter_value:
+                query['value'] = {'$regex': filter_value, '$options': 'i'}
+
+            # Fetch items based on the filter query
+            items = items_collection.find(query)
+
+            return render_template('index.html', items=items, filter_name=filter_name, filter_value=filter_value)
+
+        # If it's a GET request, just fetch the items using the saved filter
         query = {'username': user}
         if filter_name:
             query['name'] = {'$regex': filter_name, '$options': 'i'}  # Case-insensitive search
         if filter_value:
             query['value'] = {'$regex': filter_value, '$options': 'i'}
 
-        # Fetch items based on the filter query
         items = items_collection.find(query)
 
         return render_template('index.html', items=items, filter_name=filter_name, filter_value=filter_value)
+
     else:
         return redirect(url_for('login'))  # Redirect to login page if not logged in
 
